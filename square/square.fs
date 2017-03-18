@@ -7,58 +7,58 @@ open System.IO
 type Square =
   struct
     val Index: int
-    val Common: int
-    val Biggest: int
+    val SideLength: int
 
-    new (index, common, biggest) = {Index = index; Common = common; Biggest = biggest;}
-    override s.ToString() = sprintf "index={%d}, common={%d}, biggest={%d}" s.Index s.Common s.Biggest
+    new (index, sideLength) = {Index = index; SideLength = sideLength;}
+    override s.ToString() = sprintf "index={%d}, sideLength={%d}" s.Index s.SideLength
     member s.AsString = s.ToString()
 end
 
+let removeLastElement(input: List<'T>): List<'T> = input |> List.rev |> List.tail |> List.rev
 let biggestCommon(inputList: List<int>): int =
-  let biggerThan(a: int, num: int): bool = a >= num
   let rec recur(list: List<int>, num: int): int =
-    let len = list |> List.filter (fun x -> biggerThan(x, num)) |> List.length
-    if len = list.Length then recur(list, num+1) else num-1
-  recur(inputList, 1)
+    let filtered = list |> List.filter (fun x -> x >= num)
+    // printfn "filtered %A" filtered
+    let len = filtered.Length
+    // printfn "biggestCommon %d %d %d" len list.Length num
+    if len = list.Length then recur(list, num+1)
+    else num-1
+  recur(inputList, 0)
 
-let removeLastElement(input: List<'T>): List<'T> =
-  input |> List.rev |> List.tail |> List.rev
+let findSquareInList(input: List<int>): Square =
+  let subIndex = input.Length
+  let rec recur(list: List<int>, index: int, acc: Square): Square =
+    match list with
+    | [] -> acc
+    | head::tail ->
+                    let biggest = biggestCommon list
+                    // printfn "biggest %d %d" biggest tail.Length
+                    let sideLength = if biggest <= tail.Length then biggest else list.Length
+                    let newTail = removeLastElement list
+                    // printfn "SideLength %A list %A acc %A" sideLength list acc
+                    if acc.SideLength > newTail.Length then acc
+                    else if acc.SideLength < biggest && acc.SideLength < sideLength then recur(newTail, index, Square(index, sideLength))
+                    else recur(newTail, index, acc)
+  recur(input, subIndex, Square(0, 0))
 
 let findSquare(input: List<int>): Square =
   let rec recur(list: List<int>, index: int, acc: Square): Square =
     match list with
     | [] -> acc
     | head::tail ->
-                    let biggest = biggestCommon list
-                    printfn "biggest %A" biggest
-                    let newTail = removeLastElement list
-                    let squareSideLength = if biggest > tail.Length then tail.Length else biggest
-                    printfn "newTail %A" newTail
-                    if squareSideLength > newTail.Length then acc
-                    else if acc.Common < biggest then recur(newTail, index+1, Square(index, squareSideLength, biggest))
-                    else recur(newTail, index+1, acc)
-  recur(input, 0, Square(0,0,0))
+              let square = findSquareInList(head::tail)
+              if square.SideLength > acc.SideLength then recur(tail, index+1, square)
+              else recur(tail, index+1, acc)
+  recur(input, 0, Square(0,0))
 
 let readInputData =
-  let data = File.ReadLines("./input2.txt")
+  let dataList = File.ReadLines("./input.txt")
               |> Seq.toList
               |> List.map int
-  findSquare data
+  findSquare(dataList.[..1000])
 
 [<EntryPoint>]
 let main argv =
     printfn "%A" readInputData
     0 // return an integer exit code
 
-
-// 40
-// 23
-// 220
-// 20
-// 2
-// 24
-// 45
-// 65
-// 432
-// 34
