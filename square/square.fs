@@ -14,55 +14,32 @@ type Square =
     member s.AsString = s.ToString()
 end
 
-let removeLastElement(input: List<'T>): List<'T> = input |> List.rev |> List.tail |> List.rev
 
-let findSquareInList(input: List<int>): Square =
-  let subIndex = input.Length
-  let rec recur(list: List<int>, index: int, acc: Square): Square =
-    match list with
-    | [] -> acc
-    | head::tail ->
-                    let biggest = list |> List.min
-                    // printfn "biggest %d %d" biggest tail.Length
-                    let sideLength = if biggest <= tail.Length then biggest else list.Length
-                    let newTail = removeLastElement list
-                    // printfn "SideLength %A list %A acc %A" sideLength list acc
-                    if acc.SideLength > newTail.Length then acc
-                    else if acc.SideLength < biggest && acc.SideLength < sideLength then recur(newTail, index, Square(index, sideLength))
-                    else recur(newTail, index, acc)
-  recur(input, subIndex, Square(0, 0))
+let adjustIfSlidingWindowTooLong(window: List<int>, head: int): List<int> =
+  let newWindow = if window.IsEmpty then [head] else List.concat [window; [head]]
+  let windowMin = newWindow |> List.min
+  if windowMin <= newWindow.Length then
+    printfn "1 splitIndex %d" (newWindow.Length-windowMin)
+    newWindow.[newWindow.Length-windowMin..]
+  else newWindow
 
-let findSquare(input: List<int>): Square =
-  let rec recur(list: List<int>, index: int, acc: Square): Square =
-    match list with
-    | [] -> acc
-    | head::tail ->
-              let square = findSquareInList(head::tail)
-              let windowMin = head::tail |> List.min
-              if square.SideLength > acc.SideLength && square.SideLength < windowMin then recur(tail, index+1, square)
-              else recur(tail, index+1, acc)
-  recur(input, 0, Square(0,0))
-
+let adjustIfNewHeadElementTooSmallToWindow(window: List<int>, head: int): List<int> =
+  let newWindow = if window.IsEmpty then [head] else List.concat [window; [head]]
+  if window.IsEmpty then [head]
+  else if (window |> List.min) > head then
+    let isPresent = List.exists (fun x -> x > head) window
+    let splitIndex =
+      if isPresent then
+        (window |> List.findIndex (fun x -> x > head)) + 1
+      else 0
+    printfn "2 splitIndex %d" (splitIndex)
+    newWindow.[window.Length - splitIndex..]
+  else newWindow
 
 let createNewWindow(window: List<int>, head: int, acc: Square): List<int> =
   let windowMin = if window.IsEmpty then 0 else window |> List.min
-  printfn "createNewWindow %A %A, min %A" head window windowMin
-  if window.IsEmpty then [head]
-  else if windowMin < window.Length then
-      // printfn "1 Splitting %A %A" window head
-      let isPresent = List.exists (fun x -> x < window.Length) window
-      let splitIndex =  if isPresent then List.findIndex (fun x -> x < window.Length) window
-                        else window.Length
-      // printfn "1 splitIndex %d" (splitIndex+1)
-      List.concat [window.[splitIndex+1..window.Length-1]; [head]]
-  else if windowMin < head then
-      let isPresent = List.exists (fun x -> x < head) window
-      let splitIndex =  if isPresent then List.findIndex (fun x -> x < head) window
-                        else window.Length
-      // printfn "2 splitIndex %d" splitIndex
-      List.concat [window.[splitIndex..window.Length-1]; [head]]
-  else if acc.SideLength > head then [head]
-  else List.concat [window; [head]]
+  printfn "createNewWindow %A %A" head window
+  adjustIfSlidingWindowTooLong(window, head)
 
 let slidingWindow(input: List<int>): Square =
   let rec recur(list: List<int>, index: int, slidingWindow: List<int>, acc: Square): Square =
@@ -71,7 +48,7 @@ let slidingWindow(input: List<int>): Square =
     | head::tail ->
                   // printfn "slidingWindow %d %A" head slidingWindow
                   let newWindow = createNewWindow(slidingWindow, head, acc)
-                  if List.length newWindow > acc.SideLength then recur(tail, index+1, newWindow, Square(index, newWindow.Length))
+                  if newWindow.Length > acc.SideLength then recur(tail, index+1, newWindow, Square(index, newWindow.Length))
                   else recur(tail, index+1, newWindow, acc)
   recur(input, 0, [], Square(0,0))
 
@@ -80,6 +57,15 @@ let readInputData =
               |> Seq.toList
               |> List.map int
   slidingWindow(dataList)
+
+let testFunction =
+  adjustIfSlidingWindowTooLong([6;3;], 3) = [6;3;3;] && adjustIfSlidingWindowTooLong([3;2;], 1) = [1;] && adjustIfSlidingWindowTooLong([], 1) = [1;] &&
+  // adjustIfNewHeadElementTooSmallToWindow([6;3;], 3) = [6;3;3;] && adjustIfNewHeadElementTooSmallToWindow([3;2;], 1) = [1;] && adjustIfNewHeadElementTooSmallToWindow([], 1) = [1;] &&
+  adjustIfSlidingWindowTooLong([8;5;9;4;], 10) = [5;9;4;10] &&
+  adjustIfSlidingWindowTooLong([51;123;5;124;124;8;], 8) = [5; 124; 124; 8; 8] &&
+  createNewWindow([51;123;5;124;124;], 8, Square(0,0)) = [123;5;124;124;8;] &&
+  createNewWindow([51;123;5;124;124;], 3, Square(0,0)) = [124;124;3;]
+
 
 [<EntryPoint>]
 let main argv =
