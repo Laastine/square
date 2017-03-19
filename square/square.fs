@@ -15,15 +15,6 @@ type Square =
 end
 
 let removeLastElement(input: List<'T>): List<'T> = input |> List.rev |> List.tail |> List.rev
-let biggestCommon(inputList: List<int>): int =
-  let rec recur(list: List<int>, num: int): int =
-    let filtered = list |> List.filter (fun x -> x >= num)
-    // printfn "filtered %A" filtered
-    let len = filtered.Length
-    // printfn "biggestCommon %d %d %d" len list.Length num
-    if len = list.Length then recur(list, num+1)
-    else num-1
-  recur(inputList, 0)
 
 let findSquareInList(input: List<int>): Square =
   let subIndex = input.Length
@@ -31,7 +22,7 @@ let findSquareInList(input: List<int>): Square =
     match list with
     | [] -> acc
     | head::tail ->
-                    let biggest = biggestCommon list
+                    let biggest = list |> List.min
                     // printfn "biggest %d %d" biggest tail.Length
                     let sideLength = if biggest <= tail.Length then biggest else list.Length
                     let newTail = removeLastElement list
@@ -47,15 +38,48 @@ let findSquare(input: List<int>): Square =
     | [] -> acc
     | head::tail ->
               let square = findSquareInList(head::tail)
-              if square.SideLength > acc.SideLength then recur(tail, index+1, square)
+              let windowMin = head::tail |> List.min
+              if square.SideLength > acc.SideLength && square.SideLength < windowMin then recur(tail, index+1, square)
               else recur(tail, index+1, acc)
   recur(input, 0, Square(0,0))
 
+
+let createNewWindow(window: List<int>, head: int, acc: Square): List<int> =
+  let windowMin = if window.IsEmpty then 0 else window |> List.min
+  printfn "createNewWindow %A %A, min %A" head window windowMin
+  if window.IsEmpty then [head]
+  else if windowMin < window.Length then
+      // printfn "1 Splitting %A %A" window head
+      let isPresent = List.exists (fun x -> x < window.Length) window
+      let splitIndex =  if isPresent then List.findIndex (fun x -> x < window.Length) window
+                        else window.Length
+      // printfn "1 splitIndex %d" (splitIndex+1)
+      List.concat [window.[splitIndex+1..window.Length-1]; [head]]
+  else if windowMin < head then
+      let isPresent = List.exists (fun x -> x < head) window
+      let splitIndex =  if isPresent then List.findIndex (fun x -> x < head) window
+                        else window.Length
+      // printfn "2 splitIndex %d" splitIndex
+      List.concat [window.[splitIndex..window.Length-1]; [head]]
+  else if acc.SideLength > head then [head]
+  else List.concat [window; [head]]
+
+let slidingWindow(input: List<int>): Square =
+  let rec recur(list: List<int>, index: int, slidingWindow: List<int>, acc: Square): Square =
+    match list with
+    | [] -> acc
+    | head::tail ->
+                  // printfn "slidingWindow %d %A" head slidingWindow
+                  let newWindow = createNewWindow(slidingWindow, head, acc)
+                  if List.length newWindow > acc.SideLength then recur(tail, index+1, newWindow, Square(index, newWindow.Length))
+                  else recur(tail, index+1, newWindow, acc)
+  recur(input, 0, [], Square(0,0))
+
 let readInputData =
-  let dataList = File.ReadLines("./input.txt")
+  let dataList = File.ReadLines("./input2.txt")
               |> Seq.toList
               |> List.map int
-  findSquare(dataList.[..1000])
+  slidingWindow(dataList)
 
 [<EntryPoint>]
 let main argv =
