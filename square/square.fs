@@ -26,7 +26,7 @@ let slidingWindow(input: List<int>): Square =
     | [] -> acc
     | head::tail ->
                   let newWindow = updateSlidingWindow(slidingWindow, head)
-                  if newWindow.Length > acc.SideLength then recur(tail, index+1, newWindow, Square(index, newWindow.Length))
+                  if newWindow.Length > acc.SideLength then recur(tail, index+1, newWindow, Square(index+1, newWindow.Length))
                   else recur(tail, index+1, newWindow, acc)
   recur(input, 0, [], Square(0,0))
 
@@ -52,4 +52,3 @@ let testFunction =
 let main argv =
     printfn "%A" readInputData
     0 // return an integer exit code
-
