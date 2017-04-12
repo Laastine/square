@@ -20,13 +20,13 @@ let updateSlidingWindow(window: List<int>, head: int): List<int> =
   if windowMin < newWindow.Length then newWindow.[newWindow.Length-windowMin..]
   else newWindow
 
-let slidingWindow(input: List<int>): Square =
+let findBiggestSquare(input: List<int>): Square =
   let rec recur(list: List<int>, index: int, slidingWindow: List<int>, acc: Square): Square =
     match list with
     | [] -> acc
     | head::tail ->
                   let newWindow = updateSlidingWindow(slidingWindow, head)
-                  if newWindow.Length > acc.SideLength then recur(tail, index+1, newWindow, Square(index+1, newWindow.Length))
+                  if newWindow.Length > acc.SideLength then recur(tail, index+1, newWindow, Square(index, newWindow.Length))
                   else recur(tail, index+1, newWindow, acc)
   recur(input, 0, [], Square(0,0))
 
@@ -34,7 +34,7 @@ let readInputData =
   File.ReadLines("./input.txt")
     |> Seq.toList
     |> List.map int
-    |> slidingWindow
+    |> findBiggestSquare
 
 let testFunction =
   updateSlidingWindow([6;3;], 3) = [6;3;3;] &&
